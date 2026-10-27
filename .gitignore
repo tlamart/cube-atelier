@@ -1,0 +1,13 @@
+# Archives générées localement
+*.zip
+
+# Fichiers système et éditeur
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Fichiers temporaires et secrets locaux
+*.log
+.env
+.env.*
