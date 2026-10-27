@@ -36,6 +36,15 @@ dans le même dossier. Aucune clé API ni configuration serveur n’est requise.
 
 - Sept étapes avec objectifs, consignes et conseils.
 - Cube composé de 54 facettes, rotations des six faces et changement de point de vue.
+- Mode Focus actif par défaut : les cases utiles restent en couleur et les autres
+  deviennent noires, sans modifier l’état du cube. La croix blanche terminée
+  n’affiche que son centre et ses quatre branches ; la croix jaune est aussi isolée.
+- Bouton « Toutes les couleurs » pour retrouver l’ensemble du cube ; choix mémorisé.
+- Repère A sur les deux faces de l’arête suivie, B sur sa destination, avec trajet
+  expliqué sous le cube. Disponible pour la croix blanche, la deuxième couronne,
+  la croix jaune et l’alignement des arêtes. Les repères suivent les mouvements,
+  disparaissent à la fin et reviennent en reculant. Tourner la vue si un repère
+  est caché. Les cas d’exemple restent propres à chaque étape.
 - Lecture, pause, mouvement suivant/précédent, réinitialisation et trois vitesses.
 - Cas préparé propre à chaque étape : les démos sont des exemples indépendants,
   pas un solveur de cube personnalisé ni une résolution continue de l’étape 1 à 7.

@@ -9,8 +9,8 @@ const lessons = [
  {title:'Orienter les derniers coins',short:'Orienter les coins jaunes',sub:'Le dernier déclic',description:'Gardez le jaune au-dessus et le blanc en bas. Cette variante termine le cube en tournant les coins un par un.',goal:'Les six faces complètes. Votre premier cube résolu !',instructions:[['Choisissez un coin à orienter','Gardez le cube dans la même orientation jusqu’à la fin. Placez un coin jaune mal orienté en haut, devant à droite.'],['Tournez ce coin','Répétez R′ D′ R D par séquences complètes, deux ou quatre fois, jusqu’à ce que son jaune soit au-dessus. Les couches du bas se dérangent : continuez normalement.'],['Passez au coin suivant avec U','Tournez seulement U pour amener le prochain coin à cette même place. Répétez la séquence, sans tourner tout le cube. À la fin, alignez U : les autres couches se rétablissent.']],tip:'Ne corrigez pas les couches inférieures pendant cette étape. Finissez les quatre gestes et conservez exactement la même prise du cube.',alg:"R' D' R D R' D' R D U R' D' R D R' D' R D R' D' R D R' D' R D U'",top:'yellow'}
 ];
 const $=id=>document.getElementById(id);
-let current=0,completed=[],stickers=[],moves=[],index=0,playing=false,busy=false,version=0,playbackRun=0,timer=null,viewX=-26,viewY=-34,practiceMode=false;
-try{const saved=JSON.parse(localStorage.getItem('cube-atelier-v1'));if(saved && typeof saved === 'object'){current=Number.isInteger(saved.current)?Math.max(0,Math.min(6,saved.current)):0;completed=Array.isArray(saved.completed)?[...new Set(saved.completed.filter(n=>Number.isInteger(n)&&n>=0&&n<7))]:[]}}catch{}
+let current=0,completed=[],stickers=[],moves=[],index=0,playing=false,busy=false,version=0,playbackRun=0,timer=null,viewX=-26,viewY=-34,practiceMode=false,focusEnabled=true,lessonTargets=[],trackedStickerId=null;
+try{const saved=JSON.parse(localStorage.getItem('cube-atelier-v1'));if(saved && typeof saved === 'object'){current=Number.isInteger(saved.current)?Math.max(0,Math.min(6,saved.current)):0;focusEnabled=saved.focusEnabled!==false;completed=Array.isArray(saved.completed)?[...new Set(saved.completed.filter(n=>Number.isInteger(n)&&n>=0&&n<7))]:[]}}catch{}
 const palette={R:'#ed7042',L:'#e54c51',U:'#f7f6eb',D:'#f5cf48',F:'#64ad8c',B:'#589bd6'};
 const faces={R:{n:[1,0,0],axis:0,layer:1,rotation:'rotateY(90deg)'},L:{n:[-1,0,0],axis:0,layer:-1,rotation:'rotateY(-90deg)'},U:{n:[0,1,0],axis:1,layer:1,rotation:'rotateX(90deg)'},D:{n:[0,-1,0],axis:1,layer:-1,rotation:'rotateX(-90deg)'},F:{n:[0,0,1],axis:2,layer:1,rotation:''},B:{n:[0,0,-1],axis:2,layer:-1,rotation:'rotateY(180deg)'}};
 function makeCube(){stickers=[];for(const [face,f]of Object.entries(faces)){for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){let p=[0,0,0];p[f.axis]=f.layer;p[(f.axis+1)%3]=a;p[(f.axis+2)%3]=b;stickers.push({p,n:[...f.n],color:palette[face]})}}}
@@ -19,18 +19,81 @@ function moveInfo(token){const f=faces[token[0]],amount=token.includes('2')?2:to
 function applyMove(token){const m=moveInfo(token);for(const s of stickers)if(s.p[m.axis]===m.layer){s.p=rotateVector(s.p,m.axis,m.angle*Math.PI/180);s.n=rotateVector(s.n,m.axis,m.angle*Math.PI/180)}}
 function invert(token){return token.includes('2')?token:token.includes("'")?token[0]:token+"'"}
 function orientation(n){return Object.values(faces).find(f=>f.n.every((v,i)=>v===n[i])).rotation}
-function renderCube(){const fragment=document.createDocumentFragment();stickers.forEach((s,i)=>{const el=document.createElement('div');el.className='sticker';el.dataset.i=i;el.style.background=s.color;const p=s.p.map((v,j)=>v*65+s.n[j]*33);el.style.transform=`translate3d(${p[0]}px,${-p[1]}px,${p[2]}px) ${orientation(s.n)}`;fragment.appendChild(el)});$('cube').replaceChildren(fragment);updateView()}
+// Les objectifs restent attachés aux pièces : le masque ne modifie jamais leurs couleurs.
+function sameVector(a,b){return a.every((v,i)=>v===b[i])}
+function pieceSize(p){return p.filter(v=>v!==0).length}
+function stickerTransform(p,n,lift=33){const xyz=p.map((v,j)=>v*65+n[j]*lift);return `translate3d(${xyz[0]}px,${-xyz[1]}px,${xyz[2]}px) ${orientation(n)}`}
+function chooseTrackedSticker(){
+  if(![2,3,4].includes(current))return null;
+  const eligible=lessonTargets.map((g,i)=>({g,i})).filter(({g})=>pieceSize(g.p)===2&&(current===2?g.p[1]===0:g.p[1]===1));
+  const preferred=eligible.filter(({g})=>current===2?g.n[2]===1:current===3?g.n[1]===1:g.n[1]===0);
+  const candidate=preferred.find(({g,i})=>!sameVector(g.p,stickers[i].p)||!sameVector(g.n,stickers[i].n));
+  return candidate?candidate.i:null;
+}
+function focusContext(){
+  const enabled=focusEnabled&&!practiceMode,finished=index===moves.length;
+  let id=trackedStickerId;
+  if(current===0&&!finished){const face=faces[moves[index][0]],target=[face.n[0],1,face.n[2]];id=lessonTargets.findIndex(g=>g.color===palette.U&&sameVector(g.p,target))}
+  if(!enabled||finished||id===null||id<0||!lessonTargets[id])id=null;
+  return {enabled,finished,id,goal:id===null?null:lessonTargets[id],piece:id===null?null:stickers[id]};
+}
+function isFocusSticker(i,context){
+  if(!context.enabled||(current===6&&context.finished))return true;
+  const g=lessonTargets[i],size=pieceSize(g.p);
+  if(!g)return true;
+  if(context.piece&&sameVector(stickers[i].p,context.piece.p))return true;
+  if(current===0){
+    if(g.color===palette.U&&size<=2)return true;
+    return !context.finished&&context.goal&&size===1&&sameVector(g.n,[context.goal.p[0],0,context.goal.p[2]]);
+  }
+  if(current===1)return g.color===palette.U||(g.p[1]===-1&&size===3)||size===1;
+  if(current===2)return g.p[1]===0;
+  if(current===3)return g.color===palette.D&&size<=2;
+  if(current===4)return g.p[1]===1&&size<=2||size===1&&g.n[1]===0;
+  return g.p[1]===1&&size===3||size===1;
+}
+function positionName(p){return [p[1]===1?'haut':p[1]===-1?'bas':null,p[2]===1?'avant':p[2]===-1?'arrière':null,p[0]===1?'droite':p[0]===-1?'gauche':null].filter(Boolean).join(' / ')}
+function updateFocusGuide(context){
+  $('focus-on').setAttribute('aria-pressed',String(focusEnabled&&!practiceMode));
+  $('focus-off').setAttribute('aria-pressed',String(!focusEnabled||practiceMode));
+  $('focus-on').disabled=$('focus-off').disabled=busy||practiceMode;
+  const summaries=['La croix blanche en couleur. Les cases inutiles restent noires.','Les coins blancs et les centres pour vous repérer.','Les arêtes de la couronne du milieu et leurs centres.','La croix jaune et l’arête suivie sont mises en avant.','Les deux couleurs des arêtes jaunes et les centres latéraux.','Les trois couleurs des coins jaunes et leurs centres.','Les coins jaunes à orienter. À la fin, retrouvez toutes les couleurs.'];
+  $('focus-summary').textContent=practiceMode?'Exploration libre : toutes les couleurs sont visibles.':!context.enabled?'Toutes les couleurs sont visibles. Activez Focus pour isoler les pièces utiles.':current===0&&context.finished?'Croix terminée : seules les cinq cases blanches de la croix restent visibles.':current===6&&context.finished?'Cube résolu : les six faces retrouvent leurs couleurs.':summaries[current];
+  $('tracking-guide').hidden=context.id===null;
+  if(context.id===null)return;
+  $('tracking-start').textContent=positionName(context.piece.p);
+  $('tracking-end').textContent=positionName(context.goal.p);
+  const colorNames={'#ed7042':'orange','#e54c51':'rouge','#f7f6eb':'blanc','#f5cf48':'jaune','#64ad8c':'vert','#589bd6':'bleu'};
+  const colors=lessonTargets.filter(g=>sameVector(g.p,context.goal.p)).map(g=>colorNames[g.color]);
+  const arrived=sameVector(context.piece.p,context.goal.p)&&sameVector(context.piece.n,context.goal.n);
+  $('tracking-detail').textContent=`Arête ${colors.join('–')} : A suit la pièce ; B indique sa place finale. ${arrived?'Elle a atteint sa place ; terminez la séquence.':'Tournez la vue si un repère est caché.'}`;
+}
+function renderCube(){
+  const context=focusContext(),fragment=document.createDocumentFragment();
+  stickers.forEach((s,i)=>{
+    const el=document.createElement('div'),relevant=isFocusSticker(i,context),tracked=context.piece&&sameVector(s.p,context.piece.p);
+    el.className='sticker'+(!relevant?' is-masked':'')+(tracked?' is-tracked':'');el.dataset.i=i;
+    el.style.background=relevant?s.color:'#151a21';
+    el.style.transform=stickerTransform(s.p,s.n);
+    if(tracked){const marker=document.createElement('span');marker.className='piece-marker';marker.textContent='A';marker.setAttribute('aria-hidden','true');el.appendChild(marker)}
+    fragment.appendChild(el);
+  });
+  if(context.goal){const target=document.createElement('div');target.className='destination-marker';target.style.transform=stickerTransform(context.goal.p,context.goal.n,35);target.setAttribute('aria-hidden','true');const badge=document.createElement('span');badge.textContent='B';target.appendChild(badge);fragment.appendChild(target)}
+  $('cube').replaceChildren(fragment);updateView();updateFocusGuide(context);
+}
 function updateView(){$('cube').style.transform=`rotateX(${viewX}deg) rotateY(${viewY}deg)`}
 function stop(){playbackRun++;playing=false;clearTimeout(timer);$('play').textContent='▶';$('play').setAttribute('aria-label','Lire la démonstration')}
-function restore(){version++;busy=false;stop();practiceMode=false;makeCube();if(current>0){stickers.forEach(s=>{s.p=rotateVector(s.p,0,Math.PI);s.n=rotateVector(s.n,0,Math.PI)})}moves=[...lessons[current].alg.split(' ')];for(const token of [...moves].reverse())applyMove(invert(token));index=0;renderCube();updatePlayer()}
-function updatePlayer(){const algorithm=$('algorithm');algorithm.replaceChildren();moves.forEach((m,i)=>{const el=document.createElement('span');el.className='move-token'+(i<index?' played':i===index?' current':'');el.textContent=m.replace("'",'′');algorithm.appendChild(el)});$('move-count').textContent=`${index} / ${moves.length} mouvements`;$('play').disabled=busy&&!playing||practiceMode;$('back').disabled=index===0||busy||practiceMode;$('forward').disabled=index===moves.length||busy||practiceMode;$('move-caption').textContent=practiceMode?'Exploration libre : restaurez la démonstration pour reprendre.':index===0?'Cas d’exemple préparé : lancez la lecture pour voir la séquence.':index===moves.length?'Séquence terminée. Rejouez-la, puis essayez sur votre cube.':describe(moves[index-1]);}
+function restore(){version++;busy=false;stop();practiceMode=false;makeCube();if(current>0){stickers.forEach(s=>{s.p=rotateVector(s.p,0,Math.PI);s.n=rotateVector(s.n,0,Math.PI)})}lessonTargets=stickers.map(s=>({p:[...s.p],n:[...s.n],color:s.color}));moves=[...lessons[current].alg.split(' ')];for(const token of [...moves].reverse())applyMove(invert(token));trackedStickerId=chooseTrackedSticker();index=0;renderCube();updatePlayer()}
+function updatePlayer(){$('focus-on').disabled=$('focus-off').disabled=busy||practiceMode;const algorithm=$('algorithm');algorithm.replaceChildren();moves.forEach((m,i)=>{const el=document.createElement('span');el.className='move-token'+(i<index?' played':i===index?' current':'');el.textContent=m.replace("'",'′');algorithm.appendChild(el)});$('move-count').textContent=`${index} / ${moves.length} mouvements`;$('play').disabled=busy&&!playing||practiceMode;$('back').disabled=index===0||busy||practiceMode;$('forward').disabled=index===moves.length||busy||practiceMode;$('move-caption').textContent=practiceMode?'Exploration libre : restaurez la démonstration pour reprendre.':index===0?'Cas d’exemple préparé : lancez la lecture pour voir la séquence.':index===moves.length?'Séquence terminée. Rejouez-la, puis essayez sur votre cube.':describe(moves[index-1]);if(!busy)renderCube();}
 function describe(token){const names={R:'droite',L:'gauche',U:'du haut',D:'du bas',F:'avant',B:'arrière'};return `${token.replace("'",'′')} · Face ${names[token[0]]} : ${token.includes('2')?'un demi-tour':token.includes("'")?'un quart de tour antihoraire':'un quart de tour horaire'}, en regardant cette face.`}
 async function animate(token){if(busy)return false;busy=true;updatePlayer();const stamp=version,m=moveInfo(token),group=document.createElement('div');group.className='turn-group';$('cube').appendChild(group);[...$('cube').querySelectorAll('.sticker')].forEach(el=>{if(stickers[+el.dataset.i].p[m.axis]===m.layer)group.appendChild(el)});const axis=['X','Y','Z'][m.axis],angle=m.angle*(m.axis===1?1:-1);const duration=window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:Math.round(Number($('speed').value)*.47);const animation=group.animate([{transform:`rotate${axis}(0deg)`},{transform:`rotate${axis}(${angle}deg)`}],{duration,easing:'cubic-bezier(.4,0,.2,1)',fill:'forwards'});await animation.finished;if(stamp!==version)return false;applyMove(token);renderCube();busy=false;return true}
 async function forward(){if(index>=moves.length||busy)return;const ok=await animate(moves[index]);if(ok){index++;updatePlayer()}}
 async function loop(run=playbackRun){if(!playing||run!==playbackRun)return;if(index>=moves.length){stop();return}await forward();if(playing&&run===playbackRun){if(index>=moves.length){stop();return}timer=setTimeout(()=>loop(run),Math.max(80,Number($('speed').value)*.53))}}
-function persist(){try{localStorage.setItem('cube-atelier-v1',JSON.stringify({current,completed}))}catch{}}
+function persist(){try{localStorage.setItem('cube-atelier-v1',JSON.stringify({current,completed,focusEnabled}))}catch{}}
 function renderSteps(){$('step-list').replaceChildren();lessons.forEach((l,i)=>{const b=document.createElement('button');b.className='step-button'+(i===current?' active':'')+(completed.includes(i)?' done':'');if(i===current)b.setAttribute('aria-current','step');b.innerHTML=`<span class="step-number">${completed.includes(i)?'✓':i+1}</span><span><strong>${l.short}</strong><small>${l.sub}</small></span>`;b.onclick=()=>loadLesson(i);$('step-list').appendChild(b)});$('progress-count').textContent=`${completed.length} / 7`;$('progress-bar').style.width=(completed.length/7*100)+'%'}
 function loadLesson(i){if(!Number.isInteger(i)||i<0||i>=lessons.length)return;current=i;const l=lessons[i];$('step-kicker').textContent=`ÉTAPE 0${i+1} / 07`;$('lesson-title').textContent=l.title;$('lesson-description').textContent=l.description;$('goal-text').textContent=l.goal;$('tip-text').textContent=l.tip;$('instructions').replaceChildren();l.instructions.forEach(([title,body],n)=>{const div=document.createElement('div');div.className='instruction';div.innerHTML=`<span>${n+1}</span><div><strong>${title}</strong><p>${body}</p></div>`;$('instructions').appendChild(div)});$('goal-icon').innerHTML=Array.from({length:9},(_,n)=>`<i class="${i===1?'white':i>=5?'yellow':[1,3,4,5,7].includes(n)?l.top:''}"></i>`).join('');$('previous').disabled=i===0;$('complete').innerHTML=i===6?'Mon cube est résolu <span>✓</span>':'J’ai réussi cette étape <span>→</span>';renderSteps();restore();persist()}
+function setFocus(enabled){if(busy||practiceMode)return;focusEnabled=enabled;renderCube();persist()}
+$('focus-on').onclick=()=>setFocus(true);$('focus-off').onclick=()=>setFocus(false);
 $('previous').onclick=()=>current>0&&loadLesson(current-1);$('complete').onclick=()=>{if(!completed.includes(current))completed.push(current);if(current<6)loadLesson(current+1);else{renderSteps();persist();$('complete').textContent='Bravo, vous avez réussi ! ✓'}};
 $('restart').onclick=()=>{completed=[];loadLesson(0)};$('reset').onclick=restore;$('forward').onclick=async()=>{stop();await forward()};$('back').onclick=async()=>{stop();if(index>0&&!busy){const ok=await animate(invert(moves[index-1]));if(ok){index--;updatePlayer()}}};$('play').onclick=()=>{if(playing){stop();return}if(busy)return;if(index===moves.length)restore();playing=true;$('play').textContent='Ⅱ';$('play').setAttribute('aria-label','Mettre en pause');loop()};
 $('reset-view').onclick=()=>{viewX=-26;viewY=-34;updateView()};let drag=null;$('scene').onpointerdown=e=>{drag={x:e.clientX,y:e.clientY,vx:viewX,vy:viewY};$('scene').setPointerCapture(e.pointerId)};$('scene').onpointermove=e=>{if(!drag)return;viewY=drag.vy+(e.clientX-drag.x)*.5;viewX=Math.max(-85,Math.min(85,drag.vx-(e.clientY-drag.y)*.5));updateView()};$('scene').onpointerup=$('scene').onpointercancel=()=>drag=null;$('scene').onkeydown=e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();viewY+=e.key==='ArrowLeft'?-15:e.key==='ArrowRight'?15:0;viewX=Math.max(-85,Math.min(85,viewX+(e.key==='ArrowUp'?-15:e.key==='ArrowDown'?15:0)));updateView()}};

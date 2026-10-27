@@ -15,3 +15,22 @@
 .move-caption{color:#687383}
 .sim-footer .text-button{text-decoration:underline;text-underline-offset:3px}
 @media(max-width:640px){.lesson-description{font-size:13px}.instruction p{font-size:12px}.step-button{min-height:44px}.sim-controls{padding-left:18px;padding-right:18px}.player{gap:12px}.lesson-bottom{flex-wrap:wrap}.lesson-bottom .primary{margin-left:auto}.drag-label{font-size:10px}.bottom-strip{flex-wrap:wrap}.language{display:none}}
+
+/* Focus pédagogique : masque visuel, sans changement de l'état du cube. */
+.focus-toolbar{display:flex;gap:5px;align-self:flex-start;margin:10px 24px 0;padding:3px;background:#eef1f5;border-radius:7px}
+.focus-option{border:0;border-radius:5px;background:transparent;color:#697586;font-size:11px;padding:8px 11px;min-height:36px}
+.focus-option[aria-pressed="true"]{background:#fff;color:#b34d29;box-shadow:0 1px 4px #20273514;font-weight:700}
+.focus-summary{margin:10px 24px 0;min-height:36px;font-size:11px;line-height:1.7;color:#687383}
+.sticker.is-masked{box-shadow:none;border-color:#252b32}
+.sticker.is-tracked{outline:2px solid #64d5d8;outline-offset:-5px}
+.piece-marker{position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#0f6977;color:#fff;display:grid;place-items:center;font:700 12px Arial,sans-serif;border:1px solid #b5f6ff;box-shadow:0 1px 3px #0004}
+.destination-marker{position:absolute;left:-31.5px;top:-31.5px;width:63px;height:63px;border:3px dashed #69e5e6;border-radius:8px;backface-visibility:hidden;pointer-events:none;transform-style:preserve-3d}
+.destination-marker>span{position:absolute;right:3px;bottom:3px;background:#d5ffff;color:#144b55;border:1px solid #117486;border-radius:4px;width:20px;height:20px;display:grid;place-items:center;font:700 12px Arial,sans-serif}
+.tracking-guide{margin:0 20px 17px;background:#edf8fa;border:1px solid #cee8ec;border-radius:8px;padding:12px}
+.tracking-guide[hidden]{display:none}
+.tracking-route{display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:11px;color:#335762}
+.route-marker{display:inline-grid;place-items:center;flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#0f6977;color:#fff;font-size:11px;font-weight:700}
+.route-marker.destination{border:1px dashed #117486;border-radius:4px;background:#d5ffff;color:#144b55}
+.route-arrow{color:#477785;margin:0 2px}
+.tracking-guide p{font-size:10px;line-height:1.7;color:#55717a;margin:8px 0 0}
+@media(max-width:640px){.focus-toolbar{margin-left:20px}.focus-summary{margin-left:20px;margin-right:20px}.focus-option{min-height:42px}.tracking-guide{margin-left:18px;margin-right:18px}}

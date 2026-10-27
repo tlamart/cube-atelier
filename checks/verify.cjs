@@ -22,7 +22,7 @@ class Element {
   }
   replaceChildren(...children) { this.children.forEach(c => c.parent = null); this.children = []; children.forEach(c => this.appendChild(c)); }
   setAttribute(k, v) { this.attributes[k] = v; }
-  querySelectorAll(selector) { return this.children.flatMap(c => [...(c.className === selector.slice(1) ? [c] : []), ...c.querySelectorAll(selector)]); }
+  querySelectorAll(selector) { return this.children.flatMap(c => [...((c.className||'').split(' ').includes(selector.slice(1)) ? [c] : []), ...c.querySelectorAll(selector)]); }
   animate(frames, options) { animations.push({frames, options}); return { finished: delayAnimation ? new Promise(resolve => finishAnimations.push(resolve)) : Promise.resolve() }; }
   addEventListener(type, fn) { this['on' + type] = fn; }
   showModal() { this.open = true; }
@@ -51,7 +51,7 @@ function solvedState(env, lesson) {
 }
 async function main() {
   const e = environment(null);
-  assert.equal(e.nodes.cube.children.length, 54);
+  assert.equal(e.nodes.cube.querySelectorAll('.sticker').length, 54);
   // Les six faces : quatre quarts de tour et chaque mouvement suivi de son inverse.
   for (const face of ['R','L','U','D','F','B']) {
     e.run('makeCube()'); const before = state(e);
@@ -119,6 +119,45 @@ async function main() {
   e.nodes['practice-reset'].onclick();assert(!e.run('practiceMode'));
   e.nodes['scene'].onkeydown({key:'ArrowRight',preventDefault(){}}); assert(e.run('viewY')!==-34);
   e.nodes['reset-view'].onclick();assert.equal(e.run('viewY'),-34);
-  console.log('OK — HTML et ressources, 18 inversions, suite de 600 mouvements, 7 démonstrations, prérequis pédagogiques, lecture avant/arrière, annulations et concurrence, sauvegarde, exploration et clavier.');
+  // Le focus est un masque d'affichage : le cube conserve toutes ses couleurs.
+  const f=environment(null);
+  const visible=()=>f.nodes.cube.querySelectorAll('.sticker').filter(el=>!el.className.split(' ').includes('is-masked'));
+  assert(f.nodes.cube.querySelectorAll('.is-masked').length>0,'Masque actif par défaut');
+  assert(f.nodes.cube.querySelectorAll('.piece-marker').length===2,'A sur les deux couleurs de l’arête');
+  assert.equal(f.nodes.cube.querySelectorAll('.destination-marker').length,1,'B indique le but');
+  assert.equal(f.nodes['tracking-start'].textContent,'bas / avant');
+  assert.equal(f.nodes['tracking-end'].textContent,'haut / avant');
+  const initialColors=state(f);
+  f.nodes['focus-off'].onclick();assert.equal(visible().length,54);assert.equal(state(f),initialColors);
+  assert(f.nodes['tracking-guide'].hidden);assert.equal(f.nodes['focus-off'].attributes['aria-pressed'],'true');
+  assert.equal(environment(f.storage()).run('focusEnabled'),false,'Préférence conservée');
+  f.nodes['focus-on'].onclick();
+  for(let n=0;n<4;n++)await f.nodes.forward.onclick();
+  assert.equal(visible().length,5,'Croix blanche : exactement cinq cases visibles à la fin');
+  assert(visible().every(el=>el.style.background==='#f7f6eb'));
+  assert.equal(f.nodes.cube.querySelectorAll('.is-masked').length,49);
+  assert.equal(f.nodes.cube.querySelectorAll('.piece-marker').length,0);
+  assert.equal(f.nodes.cube.querySelectorAll('.destination-marker').length,0);
+  assert(f.nodes['tracking-guide'].hidden);
+  await f.nodes.back.onclick();assert(!f.nodes['tracking-guide'].hidden,'Le repérage revient en reculant');
+  for(const stage of [1,2,3,4,5,6]){
+    f.run(`loadLesson(${stage})`);
+    assert(visible().length<54,`Étape ${stage+1} : masquer les pièces inutiles`);
+    if([2,3,4].includes(stage)){
+      assert(!f.nodes['tracking-guide'].hidden,`Étape ${stage+1} : repérage actif`);
+      assert.equal(f.nodes.cube.querySelectorAll('.destination-marker').length,1);
+    }
+    const total=f.run('moves.length');for(let n=0;n<total;n++)await f.nodes.forward.onclick();
+    if(stage===3)assert.equal(visible().length,5,'Croix jaune isolée à la fin');
+    if(stage===6)assert.equal(visible().length,54,'Le cube résolu retrouve ses six couleurs');
+  }
+  f.run('loadLesson(0)');delayAnimation=true;const moving=f.nodes.forward.onclick();
+  assert(f.nodes['focus-off'].disabled,'Ne pas interrompre une rotation avec le bouton Focus');
+  f.nodes['focus-off'].onclick();assert(f.run('focusEnabled'));
+  finishAnimations.splice(0).forEach(fn=>fn());await moving;delayAnimation=false;
+  f.nodes['notation-open'].onclick();await f.nodes['notation-grid'].children[0].onclick();
+  assert.equal(visible().length,54,'Exploration libre sans masque');assert(f.nodes['tracking-guide'].hidden);
+  f.nodes['practice-reset'].onclick();assert(visible().length<54,'Rétablir le focus après exploration');
+  console.log('OK — HTML et ressources, 18 inversions, suite de 600 mouvements, 7 démonstrations, prérequis pédagogiques, lecture avant/arrière, annulations et concurrence, sauvegarde, exploration, clavier, focus et repères A/B.');
 }
 main().catch(err=>{console.error(err);process.exitCode=1});
