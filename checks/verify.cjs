@@ -6,13 +6,13 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.join(__dirname, '..');
-const html = fs.readFileSync(path.join(root, 'dist/index.html'), 'utf8');
-const source = fs.readFileSync(path.join(root, 'dist/app.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]);
 assert.equal(ids.length, new Set(ids).size, 'IDs HTML uniques');
 for (const [, id] of source.matchAll(/\$\('([^']+)'\)/g)) assert(ids.includes(id), `Élément manquant : ${id}`);
-for (const [, asset] of html.matchAll(/(?:src|href)="([^"#]+\.(?:css|js))"/g)) assert(fs.existsSync(path.join(root, 'dist', asset)));
-assert(!fs.readFileSync(path.join(root, 'dist/style.css'), 'utf8').includes('@import'), 'CSS autonome');
+for (const [, asset] of html.matchAll(/(?:src|href)="([^"#]+\.(?:css|js))"/g)) assert(fs.existsSync(path.join(root, asset)));
+assert(!fs.readFileSync(path.join(root, 'style.css'), 'utf8').includes('@import'), 'CSS autonome');
 class Element {
   constructor(tag = 'div') { this.tag = tag; this.style = {}; this.dataset = {}; this.children = []; this.attributes = {}; this.value = '850'; this.disabled = false; this.open = false; }
   appendChild(child) {

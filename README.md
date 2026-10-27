@@ -5,23 +5,32 @@ avec représentation 3D interactive en CSS et JavaScript natifs.
 
 ## Consulter le site
 
-Ouvrir `dist/index.html` dans un navigateur récent, ou servir le dossier `dist` :
+Ouvrir `index.html` dans un navigateur récent, ou servir le dossier du dépôt :
 
 ```sh
-python3 -m http.server 8000 --directory dist
+python3 -m http.server 8000
 ```
 
 Puis ouvrir `http://localhost:8000`.
 
-## Publier
+## Publier sur GitHub Pages
 
-Déposer le **contenu** de `dist/` à la racine d’un hébergement statique :
-`index.html`, `style.css` et `app.js`, dans le même dossier.
-Aucune installation, compilation, clé API ou configuration serveur n’est nécessaire.
-Les chemins relatifs permettent aussi une publication dans un sous-dossier.
+Les fichiers du site sont à la racine du dépôt. Aucune installation ou compilation
+n’est nécessaire, et aucun workflow personnalisé n’est à ajouter.
 
-L’archive `cube-atelier-publication.zip` contient ces trois fichiers à sa racine.
-Aucun site distant n’a été créé ou déployé dans cette vérification.
+1. Ouvrir [Settings → Pages](https://github.com/tlamart/cube-atelier/settings/pages).
+2. Dans **Build and deployment**, choisir **Deploy from a branch** comme source.
+3. Sélectionner la branche **main** et le dossier **/ (root)**.
+4. Cliquer sur **Save** et attendre la fin du déploiement GitHub Pages.
+
+L’adresse attendue après activation est : https://tlamart.github.io/cube-atelier/
+
+Les prochains commits sur `main` seront publiés automatiquement.
+Le fichier `.nojekyll` évite le traitement du site par Jekyll.
+Les chemins relatifs des ressources conviennent au sous-dossier `/cube-atelier/`.
+
+Pour un autre hébergement statique, déposer `index.html`, `style.css` et `app.js`
+dans le même dossier. Aucune clé API ni configuration serveur n’est requise.
 
 ## Fonctionnement
 
@@ -39,7 +48,7 @@ Aucun site distant n’a été créé ou déployé dans cette vérification.
 ## Contrôles
 
 ```sh
-node --check dist/app.js
+node --check app.js
 node checks/verify.cjs
 ```
 
