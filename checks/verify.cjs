@@ -47,7 +47,7 @@ function environment(saved) {
 const equalState = (a, b, message) => assert.equal(JSON.stringify(a), JSON.stringify(b), message);
 const state = env => env.run('JSON.stringify(stickers)');
 function solvedState(env, lesson) {
-  return env.run(`makeCube(); if(${lesson}>0&&${lesson}<6)stickers.forEach(s=>{s.p=rotateVector(s.p,0,Math.PI);s.n=rotateVector(s.n,0,Math.PI)}); JSON.stringify(stickers)`);
+  return env.run(`makeCube(); if(${lesson}>0&&${lesson}<6)stickers.forEach(s=>{s.p=rotateVector(s.p,0,Math.PI);s.n=rotateVector(s.n,0,Math.PI)});if(${lesson}===2)applyMove("y'"); JSON.stringify(stickers)`);
 }
 async function main() {
   const e = environment(null);
@@ -70,9 +70,9 @@ async function main() {
     const solved = JSON.parse(solvedState(e,i));
     e.run(`loadLesson(${i})`);
     const initial = JSON.parse(state(e));
-    const reference = i===6 ? JSON.parse(e.run("const savedState=stickers;stickers=JSON.parse("+JSON.stringify(JSON.stringify(solved))+");applyMove('x2');const referenceState=JSON.stringify(stickers);stickers=savedState;referenceState")) : solved;
+    const reference = [2,6].includes(i) ? JSON.parse(e.run("(()=>{const savedState=stickers;stickers=JSON.parse("+JSON.stringify(JSON.stringify(solved))+");applyMove("+JSON.stringify(i===2?"y":"x2")+");const referenceState=JSON.stringify(stickers);stickers=savedState;return referenceState})()")) : solved;
     if (i>=3) initial.forEach((s,j) => { if(s.p[1]<1) equalState(s,reference[j],`Étape ${i+1} : préserver les deux premières couches`); });
-    if (i===2) initial.forEach((s,j) => { if(s.p[1]===-1) equalState(s,solved[j], 'Deuxième couronne : première couche conservée'); });
+    if (i===2) initial.forEach((s,j) => { if(s.p[1]===-1) equalState(s,reference[j], 'Deuxième couronne : première couche conservée'); });
     if (i>=4) {
       const yellowEdges=initial.filter(s=>s.n[1]===1&&s.color==='#f5cf48'&&Math.abs(s.p[0])+Math.abs(s.p[2])===1);
       assert.equal(yellowEdges.length,4,'Croix jaune conservée');
@@ -189,6 +189,27 @@ async function main() {
   assert(g.run("stickers.some(s=>s.color===palette.D&&s.n[1]===1&&pieceSize(s.p)===1)"));
   assert.equal(g.run('viewX'),-26);
   g.run("makeCube();const preflip=JSON.stringify(stickers);applyMove('x2');applyMove('x2');assert.equal(JSON.stringify(stickers),preflip)");
+  // L'insertion à gauche suit exactement les quatre phases et tourne tout le cube.
+  const h=environment(null);h.run('loadLesson(2)');
+  assert.equal(h.run('moves.join(" ")'),"U' L' U' L U y' R U R' U'");
+  assert.equal(h.run('lessons[2].instructions.length'),4);
+  assert.equal(h.nodes['tracking-start'].textContent,'haut / avant');
+  assert.equal(h.nodes['tracking-end'].textContent,'avant / gauche');
+  assert(h.nodes['sequence-hint'].textContent.startsWith('1.'));
+  await h.nodes.forward.onclick();assert(h.nodes['sequence-hint'].textContent.startsWith('2.'));
+  for(let n=0;n<4;n++)await h.nodes.forward.onclick();
+  assert(h.nodes['sequence-hint'].textContent.startsWith('3.'));
+  const frontBefore=h.run('stickers.find(s=>pieceSize(s.p)===1&&s.n[2]===1).color');
+  const leftBefore=h.run('stickers.find(s=>pieceSize(s.p)===1&&s.n[0]===-1).color');
+  await h.nodes.forward.onclick();assert(h.nodes['sequence-hint'].textContent.startsWith('4.'));
+  assert.equal(h.run('stickers.find(s=>pieceSize(s.p)===1&&s.n[2]===1).color'),leftBefore);
+  assert.equal(h.nodes['tracking-end'].textContent,'avant / droite','La destination tourne avec tout le cube');
+  for(let n=0;n<4;n++)await h.nodes.forward.onclick();
+  assert(h.run('stickers.every((s,i)=>sameVector(s.p,lessonTargets[i].p)&&sameVector(s.n,lessonTargets[i].n))'));
+  for(let n=0;n<10;n++)await h.nodes.back.onclick();
+  assert.equal(h.run('stickers.find(s=>pieceSize(s.p)===1&&s.n[2]===1).color'),frontBefore);
+  assert.equal(h.nodes['tracking-end'].textContent,'avant / gauche');
+  h.run("makeCube();const base=JSON.stringify(stickers);applyMove(\"y'\");applyMove('y');assert.equal(JSON.stringify(stickers),base)");
   console.log('OK — HTML et ressources, 18 inversions, suite de 600 mouvements, 7 démonstrations, prérequis pédagogiques, lecture avant/arrière, annulations et concurrence, sauvegarde, exploration, clavier, focus, repères A/B, sexy moves des deux mains et retournement final.');
 }
 main().catch(err=>{console.error(err);process.exitCode=1});

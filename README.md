@@ -52,6 +52,10 @@ dans le même dossier. Aucune clé API ni configuration serveur n’est requise.
   gauche (`L′ U′ L U`) avec quatre gestes détaillés et deux démonstrations au choix.
 - Repère pour les arêtes du milieu : « à gauche, je commence à droite (U′) ;
   à droite, je commence à gauche (U) », introduit à l’étape 2 et détaillé à l’étape 3.
+- L’étape 3 montre l’insertion à gauche en quatre temps : U′ (éloigner à droite),
+  sexy move main gauche, rotation du cube pour regarder l’ancienne face gauche
+  (y′), puis sexy move main droite. Les repères A/B restent attachés à la pièce
+  et à son emplacement pendant la rotation. Le conseil donne aussi le cas miroir.
 - La dernière étape retourne réellement le cube (`x2`), jaune en bas et blanc
   en haut, puis oriente le coin en bas devant à droite avec le sexy move main
   droite (`R U R′ U′`). Entre les coins, seule D tourne. L’exemple traite deux
