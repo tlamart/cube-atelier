@@ -47,7 +47,7 @@ function environment(saved) {
 const equalState = (a, b, message) => assert.equal(JSON.stringify(a), JSON.stringify(b), message);
 const state = env => env.run('JSON.stringify(stickers)');
 function solvedState(env, lesson) {
-  return env.run(`makeCube(); if(${lesson}>0)stickers.forEach(s=>{s.p=rotateVector(s.p,0,Math.PI);s.n=rotateVector(s.n,0,Math.PI)}); JSON.stringify(stickers)`);
+  return env.run(`makeCube(); if(${lesson}>0&&${lesson}<6)stickers.forEach(s=>{s.p=rotateVector(s.p,0,Math.PI);s.n=rotateVector(s.n,0,Math.PI)}); JSON.stringify(stickers)`);
 }
 async function main() {
   const e = environment(null);
@@ -70,16 +70,17 @@ async function main() {
     const solved = JSON.parse(solvedState(e,i));
     e.run(`loadLesson(${i})`);
     const initial = JSON.parse(state(e));
-    if (i>=3) initial.forEach((s,j) => { if(s.p[1]<1) equalState(s,solved[j],`Étape ${i+1} : préserver les deux premières couches`); });
+    const reference = i===6 ? JSON.parse(e.run("const savedState=stickers;stickers=JSON.parse("+JSON.stringify(JSON.stringify(solved))+");applyMove('x2');const referenceState=JSON.stringify(stickers);stickers=savedState;referenceState")) : solved;
+    if (i>=3) initial.forEach((s,j) => { if(s.p[1]<1) equalState(s,reference[j],`Étape ${i+1} : préserver les deux premières couches`); });
     if (i===2) initial.forEach((s,j) => { if(s.p[1]===-1) equalState(s,solved[j], 'Deuxième couronne : première couche conservée'); });
     if (i>=4) {
       const yellowEdges=initial.filter(s=>s.n[1]===1&&s.color==='#f5cf48'&&Math.abs(s.p[0])+Math.abs(s.p[2])===1);
       assert.equal(yellowEdges.length,4,'Croix jaune conservée');
     }
-    if(i>=5) initial.forEach((s,j)=> {if(s.p.filter(v=>v!==0).length===2)equalState(s,solved[j],'Arêtes conservées');});
+    if(i>=5) initial.forEach((s,j)=> {if(s.p.filter(v=>v!==0).length===2)equalState(s,reference[j],'Arêtes conservées');});
     if(i===6) {
       const colorsAt=(list,p)=>list.filter(s=>s.p.every((v,j)=>v===p[j])).map(s=>s.color).sort();
-      for(const x of [-1,1])for(const z of [-1,1])equalState(colorsAt(initial,[x,1,z]),colorsAt(solved,[x,1,z]),'Dernière étape : coins à la bonne place');
+      for(const x of [-1,1])for(const z of [-1,1])equalState(colorsAt(initial,[x,1,z]),colorsAt(reference,[x,1,z]),'Dernière étape : coins à la bonne place');
     }
     const count=e.run('moves.length');
     await e.nodes.forward.onclick(); await e.nodes.back.onclick();
@@ -158,6 +159,36 @@ async function main() {
   f.nodes['notation-open'].onclick();await f.nodes['notation-grid'].children[0].onclick();
   assert.equal(visible().length,54,'Exploration libre sans masque');assert(f.nodes['tracking-guide'].hidden);
   f.nodes['practice-reset'].onclick();assert(visible().length<54,'Rétablir le focus après exploration');
-  console.log('OK — HTML et ressources, 18 inversions, suite de 600 mouvements, 7 démonstrations, prérequis pédagogiques, lecture avant/arrière, annulations et concurrence, sauvegarde, exploration, clavier, focus et repères A/B.');
+  // Les deux mains sont de vraies démonstrations en miroir.
+  const g=environment(null);g.run('loadLesson(1)');assert.equal(g.nodes['technique-panel'].hidden,false);
+  g.nodes['sexy-left'].onclick();assert.equal(g.run('moves.join(" ")'),"L' U' L U");
+  assert.equal(g.nodes['sexy-left'].attributes['aria-pressed'],'true');
+  for(let n=0;n<4;n++)await g.nodes.forward.onclick();
+  const actualLeft=state(g),leftSolved=solvedState(g,1);assert.equal(actualLeft,leftSolved);
+  g.nodes['sexy-right'].onclick();assert.equal(g.run('moves.join(" ")'),"R U R' U'");
+  g.run(`for(const sequence of ["R U R' U'", "L' U' L U"]){makeCube();const start=JSON.stringify(stickers);for(let n=0;n<6;n++)sequence.split(' ').forEach(applyMove);assert.equal(JSON.stringify(stickers),start)}`);
+  // La fin commence jaune en haut, retourne réellement le cube et travaille en bas.
+  g.run('loadLesson(6)');assert(g.nodes['technique-panel'].hidden);
+  assert(g.run("stickers.some(s=>s.color===palette.D&&s.n[1]===1&&pieceSize(s.p)===1)"));
+  assert.equal(g.run('moves[0]'),'x2');
+  await g.nodes.forward.onclick();assert.equal(g.run('index'),1);
+  assert(g.run("stickers.some(s=>s.color===palette.D&&s.n[1]===-1&&pieceSize(s.p)===1)"));
+  assert(g.run("stickers.some(s=>s.color===palette.U&&s.n[1]===1&&pieceSize(s.p)===1)"));
+  assert.equal(g.run('viewX'),26);
+  const bottomWorkYellow=()=>g.run("stickers.some(s=>sameVector(s.p,[1,-1,1])&&s.color===palette.D&&s.n[1]===-1)");
+  assert(!bottomWorkYellow(),'Premier coin initialement mal orienté');
+  for(let n=0;n<8;n++)await g.nodes.forward.onclick();
+  assert(bottomWorkYellow(),'Deux sexy moves orientent le premier coin');
+  assert.equal(g.run('moves[index]'),'D');
+  await g.nodes.forward.onclick();assert(!bottomWorkYellow(),'D amène le prochain coin mal orienté');
+  for(let n=0;n<16;n++)await g.nodes.forward.onclick();
+  assert(bottomWorkYellow(),'Quatre sexy moves orientent le deuxième coin');
+  await g.nodes.forward.onclick();
+  assert(g.run('stickers.every((s,i)=>sameVector(s.p,lessonTargets[i].p)&&sameVector(s.n,lessonTargets[i].n))'),'Cube entièrement résolu');
+  for(let n=0;n<27;n++)await g.nodes.back.onclick();assert.equal(g.run('index'),0);
+  assert(g.run("stickers.some(s=>s.color===palette.D&&s.n[1]===1&&pieceSize(s.p)===1)"));
+  assert.equal(g.run('viewX'),-26);
+  g.run("makeCube();const preflip=JSON.stringify(stickers);applyMove('x2');applyMove('x2');assert.equal(JSON.stringify(stickers),preflip)");
+  console.log('OK — HTML et ressources, 18 inversions, suite de 600 mouvements, 7 démonstrations, prérequis pédagogiques, lecture avant/arrière, annulations et concurrence, sauvegarde, exploration, clavier, focus, repères A/B, sexy moves des deux mains et retournement final.');
 }
 main().catch(err=>{console.error(err);process.exitCode=1});

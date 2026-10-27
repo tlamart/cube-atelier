@@ -48,7 +48,15 @@ dans le même dossier. Aucune clé API ni configuration serveur n’est requise.
 - Lecture, pause, mouvement suivant/précédent, réinitialisation et trois vitesses.
 - Cas préparé propre à chaque étape : les démos sont des exemples indépendants,
   pas un solveur de cube personnalisé ni une résolution continue de l’étape 1 à 7.
-- La dernière étape utilise la variante `R′ D′ R D`, avec le jaune au-dessus.
+- À l’étape 2, explication des sexy moves main droite (`R U R′ U′`) et main
+  gauche (`L′ U′ L U`) avec quatre gestes détaillés et deux démonstrations au choix.
+- Repère pour les arêtes du milieu : « à gauche, je commence à droite (U′) ;
+  à droite, je commence à gauche (U) », introduit à l’étape 2 et détaillé à l’étape 3.
+- La dernière étape retourne réellement le cube (`x2`), jaune en bas et blanc
+  en haut, puis oriente le coin en bas devant à droite avec le sexy move main
+  droite (`R U R′ U′`). Entre les coins, seule D tourne. L’exemple traite deux
+  coins avec deux puis quatre répétitions, et aligne D à la fin. La vue montre
+  le dessous après le retournement ; la lecture arrière annule aussi ce retournement.
 - Progression enregistrée uniquement dans le localStorage du navigateur.
 - Fonctionne sans ressources externes. Les liens vers J Perm nécessitent Internet.
 - Navigation clavier ; flèches pour tourner la vue du cube sélectionné ;

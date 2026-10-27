@@ -34,3 +34,21 @@
 .route-arrow{color:#477785;margin:0 2px}
 .tracking-guide p{font-size:10px;line-height:1.7;color:#55717a;margin:8px 0 0}
 @media(max-width:640px){.focus-toolbar{margin-left:20px}.focus-summary{margin-left:20px;margin-right:20px}.focus-option{min-height:42px}.tracking-guide{margin-left:18px;margin-right:18px}}
+
+/* Gestes en miroir et repères de lecture de la dernière étape. */
+.technique-panel{margin-top:20px;padding:16px;background:#f8fafc;border:1px solid #e3e8ef;border-radius:9px}
+.technique-panel[hidden],.sequence-hint[hidden]{display:none}
+.technique-panel h3{font-size:13px;margin:0 0 14px}
+.technique-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.technique-card{background:#fff;border:1px solid #e5e9ee;border-radius:7px;padding:12px}
+.technique-card strong{display:block;font-size:12px}
+.technique-card code{display:block;font-size:13px;font-weight:700;color:#b34d29;margin:10px 0}
+.technique-card ol{font-size:11px;line-height:1.8;color:#687383;padding-left:16px;margin:10px 0}
+.technique-card button{padding:8px;border:1px solid #dce2ea;border-radius:5px;background:white;font-size:10px;color:#637080;min-height:40px;width:100%}
+.technique-card button[aria-pressed="true"]{background:#fff0e9;border-color:#f2b99f;color:#a74827;font-weight:700}
+.technique-panel>p{font-size:11px;line-height:1.8;color:#687383;margin:12px 0 0}
+.sequence-hint{font-size:11px;line-height:1.8;color:#456374;padding:11px;background:#eff6fa;border-radius:6px;margin:14px 0 0}
+.move-token.whole-cube{background:#eef2ff;color:#5369a0;border-color:#cbd5f2}
+.move-token.change-corner{background:#eff8f2;color:#407959;border-color:#c6e3d1}
+@media(max-width:1150px) and (min-width:641px){.technique-cards{grid-template-columns:1fr}}
+@media(max-width:380px){.technique-cards{grid-template-columns:1fr}}
